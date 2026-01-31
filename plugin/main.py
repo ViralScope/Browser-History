@@ -25,10 +25,11 @@ class BrowserHistory(Flox):
         return self._results
 
     def query(self, query):
-        history = self.browser.history(limit=10000)
-        query_lower = query.lower()
-        for idx, item in enumerate(history):
-            if query_lower in item.title.lower() or query_lower in item.url.lower():
+        if not query or not query.strip():
+            # If query is empty, just show the most recent history
+            # Limit to 25 to ensure fast load times
+            history = self.browser.history(limit=25)
+            for idx, item in enumerate(history):
                 subtitle = f"{idx}. {item.url}"
                 
                 # Try to get favicon for the website
@@ -49,6 +50,32 @@ class BrowserHistory(Flox):
                     parameters=[item.url],
                     context=[item.title, item.url]
                 )
+        else:
+            # If query is not empty, search through history
+            history = self.browser.history(limit=10000)
+            query_lower = query.lower()
+            for idx, item in enumerate(history):
+                if query_lower in item.title.lower() or query_lower in item.url.lower():
+                    subtitle = f"{idx}. {item.url}"
+                    
+                    # Try to get favicon for the website
+                    favicon_path = self.favicon_cache.get_favicon_path(item.url)
+                    
+                    # Use favicon if available, otherwise use default icon and glyph
+                    if favicon_path:
+                        icon, glyph = favicon_path, None
+                    else:
+                        icon, glyph = ICON_HISTORY, HISTORY_GLYPH
+                    
+                    self.add_item(
+                        title=item.title,
+                        subtitle=subtitle,
+                        icon=icon,
+                        glyph=glyph,
+                        method=self.browser_open,
+                        parameters=[item.url],
+                        context=[item.title, item.url]
+                    )
 
     def context_menu(self, data):
         self.add_item(
